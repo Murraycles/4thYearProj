@@ -1,0 +1,95 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Mon Mar 19 14:20:55 2018
+
+@author: Lewis Cole
+"""
+import numpy as np
+import matplotlib.pyplot as plt
+
+# Input the size of the 1D Ising model and the number of MC iterations
+visible = int(input("size of ising model: "))
+iterations = int(input("no of iterations: "))
+
+# define the Ising model class
+class Ising(object):
+    # Initialise the ising model parameters
+    def __init__(self, s1=1, s2=1, totE=-visible, H=0):
+        self.s1 = np.ones((visible,), dtype=int)
+        self.s2 = self.s1
+        self.H = H
+        self.totE = totE
+        print("initial ", self.totE)
+
+    def spin_flip(self, beta=1, spin=0):
+        # define a chance for output when not created
+        chance = 0
+        # randomly choose a spin to flip 
+        self.spin = np.random.randint(visible)
+        # define the second configuration as initially identical to the first
+        self.s2 = self.s1
+        # define the configuration with the flipped spin state
+        self.s2[self.spin] = -self.s1[self.spin]
+        # get the most favourable energy, the potential 'flipped' energy, and 
+        # and the favourable energy configurtion
+        self.energy, self.pot, self.s1 = self.Energy()
+        # amend the total energy state if the spin was flipped
+        self.totE += self.pot * (self.s1.all() == self.s2.all())
+        if self.s1.all() == self.s2.all():
+            print("energy ", self.totE)
+        # define the probability of the spin swithcing if not favoured
+        prob = np.exp(-(self.pot/beta))
+        # random check to flip spin if not favoured
+        if self.s1.all() != self.s2.all():
+            chance = np.random.uniform()
+            if chance < prob:
+                self.s1[self.spin] = self.s2[self.spin]
+                self.totE += 2 * self.pot
+                print("energy ", self.totE)
+        #return total energy, configuration, and spin flip probabilities to 
+        #check
+        return (self.totE, self.s1, chance, prob)
+
+    def Energy(self, J=1):
+        # define neighbouring spin locations
+        neighbour1 = self.spin + 1
+        neighbour2 = self.spin - 1
+        # wrap the ising model
+        if neighbour1 >= visible:
+            neighbour1 = 0
+        if neighbour2 < 0:
+            neighbour2 = visible - 1
+        # calculate the energies of the current and flipped states
+        E1 = - np.sum(self.s1[neighbour1] * J * self.s1[self.spin] +
+                      self.s1[neighbour2] * J * self.s1[self.spin] +
+                      self.H * self.s1[self.spin])
+        E2 = - np.sum(self.s2[neighbour1] * J * self.s2[self.spin] +
+                      self.s2[neighbour2] * J * self.s2[self.spin] +
+                      self.H * self.s1[self.spin])
+        # return the current and potential energies, and the preferred state
+        if E2 < 0:
+            config = self.s2
+            return (E1, E2, config)
+        else:
+            config = self.s1
+            return (E1, E2, config)
+
+
+# initialise ising model
+x = Ising()
+# predefine loop variables
+M = np.zeros(iterations)
+E = M
+C = M
+P = M
+# attempt spin flips, receive energy, magnetisation, and flip porbabilities
+for i in range(iterations):
+    E[i], K, C[i], P[i] = x.spin_flip()
+    M[i] = np.sum(K)
+    print("mag ", M[i])
+# plot energies and magnetisations
+plt.plot(E)
+plt.show()
+fig2 = plt.figure(2)
+plt.plot(M)
+plt.show
